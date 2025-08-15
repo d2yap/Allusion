@@ -83,9 +83,14 @@ export const Advanced = observer(() => {
             <input readOnly value={uiStore.deepDanbooruModelPath} className="filepicker-path" />
             <FileInput
               className="btn-minimal filepicker-input"
-              options={{ properties: ['openFile'], filters: [{ name: 'Keras model', extensions: ['h5'] }] }}
+              options={{
+                properties: ['openFile'],
+                filters: [{ name: 'Keras model', extensions: ['h5'] }],
+              }}
               onChange={async ([p]) => {
-                if (!p) return;
+                if (!p) {
+                  return;
+                }
                 // persist config via main
                 await (ipcRenderer as any).invoke('deepdanbooru:set-config', { modelPath: p });
                 uiStore.deepDanbooruModelPath = p;
@@ -97,15 +102,22 @@ export const Advanced = observer(() => {
         </div>
       </div>
       <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>DeepDanbooru tag list</label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          DeepDanbooru tag list
+        </label>
         <div className="filepicker">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input readOnly value={uiStore.deepDanbooruTagListPath} className="filepicker-path" />
             <FileInput
               className="btn-minimal filepicker-input"
-              options={{ properties: ['openFile'], filters: [{ name: 'Tag list', extensions: ['txt','json'] }] }}
+              options={{
+                properties: ['openFile'],
+                filters: [{ name: 'Tag list', extensions: ['txt', 'json'] }],
+              }}
               onChange={async ([p]) => {
-                if (!p) return;
+                if (!p) {
+                  return;
+                }
                 await (ipcRenderer as any).invoke('deepdanbooru:set-config', { tagListPath: p });
                 uiStore.deepDanbooruTagListPath = p;
               }}

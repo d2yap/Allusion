@@ -872,8 +872,12 @@ class UiStore {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cfg: any = await ipcRenderer.invoke('deepdanbooru:get-config');
         if (cfg) {
-          if (!this.deepDanbooruModelPath && cfg.modelPath) this.deepDanbooruModelPath = cfg.modelPath;
-          if (!this.deepDanbooruTagListPath && cfg.tagListPath) this.deepDanbooruTagListPath = cfg.tagListPath;
+          if (!this.deepDanbooruModelPath && cfg.modelPath) {
+            this.deepDanbooruModelPath = cfg.modelPath;
+          }
+          if (!this.deepDanbooruTagListPath && cfg.tagListPath) {
+            this.deepDanbooruTagListPath = cfg.tagListPath;
+          }
         }
       } catch (e) {
         // ignore
@@ -904,9 +908,9 @@ class UiStore {
       isThumbnailFilenameOverlayEnabled: this.isThumbnailFilenameOverlayEnabled,
       isThumbnailTagOverlayEnabled: this.isThumbnailTagOverlayEnabled,
       isThumbnailResolutionOverlayEnabled: this.isThumbnailResolutionOverlayEnabled,
-  isAutoTagOnImportEnabled: this.isAutoTagOnImportEnabled,
-  deepDanbooruModelPath: this.deepDanbooruModelPath,
-  deepDanbooruTagListPath: this.deepDanbooruTagListPath,
+      isAutoTagOnImportEnabled: this.isAutoTagOnImportEnabled,
+      deepDanbooruModelPath: this.deepDanbooruModelPath,
+      deepDanbooruTagListPath: this.deepDanbooruTagListPath,
       outlinerWidth: this.outlinerWidth,
       inspectorWidth: this.inspectorWidth,
       isRememberSearchEnabled: this.isRememberSearchEnabled,

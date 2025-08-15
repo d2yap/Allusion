@@ -24,7 +24,9 @@ export async function predictDeepDanbooru(
       // NOTE: this may return {} if not configured
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cfg: any = await (ipcRenderer as any).invoke('deepdanbooru:get-config');
-      if (cfg && cfg.projectPath) useProject = cfg.projectPath;
+      if (cfg && cfg.projectPath) {
+        useProject = cfg.projectPath;
+      }
     } catch (e) {
       console.warn('Could not read DeepDanbooru config from main process', e);
     }

@@ -792,7 +792,9 @@ ipcMain.handle('deepdanbooru:choose-model', async () => {
     properties: ['openFile'],
     filters: [{ name: 'Keras model', extensions: ['h5'] }],
   });
-  if (canceled || filePaths.length === 0) return null;
+  if (canceled || filePaths.length === 0) {
+    return null;
+  }
   const cfg = readDeepDanbooruConfig();
   cfg.modelPath = filePaths[0];
   writeDeepDanbooruConfig(cfg);
@@ -804,7 +806,9 @@ ipcMain.handle('deepdanbooru:choose-taglist', async () => {
     properties: ['openFile'],
     filters: [{ name: 'Tag list', extensions: ['txt', 'json'] }],
   });
-  if (canceled || filePaths.length === 0) return null;
+  if (canceled || filePaths.length === 0) {
+    return null;
+  }
   const cfg = readDeepDanbooruConfig();
   cfg.tagListPath = filePaths[0];
   writeDeepDanbooruConfig(cfg);
