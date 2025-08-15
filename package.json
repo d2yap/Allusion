@@ -54,10 +54,12 @@
       ]
     },
     "extraResources": [
-      "resources/themes"
+      "resources/themes",
+      "resources/deepdanbooru/predict.py"
     ],
     "nsis": {
       "oneClick": false,
+  "include": "build/deepdanbooru-check.nsh",
       "allowToChangeInstallationDirectory": true
     },
     "portable": {

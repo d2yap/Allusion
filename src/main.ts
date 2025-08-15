@@ -67,6 +67,39 @@ function writeDeepDanbooruConfig(cfg: Record<string, unknown>) {
   }
 }
 
+function resolveDeepDanbooruScript(): string {
+  const execDir = path.dirname(process.execPath || '');
+  const candidates = [
+    path.join(process.resourcesPath || '', 'deepdanbooru', 'predict.py'),
+    path.join(process.resourcesPath || '', 'resources', 'deepdanbooru', 'predict.py'),
+    path.join(process.resourcesPath || '', 'app', 'resources', 'deepdanbooru', 'predict.py'),
+    path.join(execDir, 'resources', 'deepdanbooru', 'predict.py'),
+    path.resolve(__dirname, '..', 'resources', 'deepdanbooru', 'predict.py'),
+    path.resolve(__dirname, '..', '..', 'resources', 'deepdanbooru', 'predict.py'),
+    path.resolve(process.cwd(), 'resources', 'deepdanbooru', 'predict.py'),
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        console.info('DeepDanbooru script found at:', p);
+        return p;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  console.warn('DeepDanbooru script not found; tried candidates:', candidates, {
+    processResourcesPath: process.resourcesPath,
+    execPath: process.execPath,
+    isPackaged: app.isPackaged,
+    __dirname,
+    cwd: process.cwd(),
+  });
+  return candidates[0];
+}
+
 type PreferencesFile = {
   checkForUpdatesOnStartup?: boolean;
 };
@@ -650,9 +683,12 @@ MainMessenger.onSetRunningInBackground(({ isRunInBackground }) => {
   }
 });
 
-MainMessenger.onStoreFile(({ directory, filenameWithExt, imgBase64 }) =>
-  clipServer!.storeImageWithoutImport(directory, filenameWithExt, imgBase64),
-);
+MainMessenger.onStoreFile(async ({ directory, filenameWithExt, imgBase64 }) => {
+  if (clipServer) {
+    return await clipServer.storeImageWithoutImport(directory, filenameWithExt, imgBase64);
+  }
+  return '';
+});
 
 // Forward files from the main window to the preview window
 MainMessenger.onSendPreviewFiles((msg) => {
@@ -834,9 +870,26 @@ ipcMain.handle('deepdanbooru:set-config', async (_ev, partialCfg: Record<string,
 // DeepDanbooru prediction handler: spawn Python helper and forward JSON reply
 ipcMain.on(DEEPDANBOORU_PREDICT, async (e, msg: DeepDanbooruPredictMessage) => {
   const pythonPath = process.env.DEEPDANBOORU_PYTHON || 'python'; // system python; can be overridden via env var
-  const scriptPath = path.join(__dirname, '..', 'resources', 'deepdanbooru', 'predict.py');
+  const scriptPath = resolveDeepDanbooruScript();
   // Default project path is the resources deepdanbooru folder
   const defaultProjectPath = path.join(__dirname, '..', 'resources', 'deepdanbooru');
+  if (!scriptPath || !fs.existsSync(scriptPath)) {
+    console.error('DeepDanbooru script not found, aborting helper spawn. scriptPath=', scriptPath);
+    return;
+  }
+  // Quick check: handle vector or unsupported image formats (e.g., SVG) by returning an "Untagged" tag
+  try {
+    const ext = path.extname(msg.imagePath || '').toLowerCase();
+    const vectorExts = ['.svg', '.svgz', '.eps', '.ai', '.pdf'];
+    if (vectorExts.includes(ext)) {
+      console.info('Image is a vector/unsupported format, returning Untagged:', msg.imagePath);
+      e.sender.send(DEEPDANBOORU_PREDICT_REPLY, { tags: [{ tag: 'Untagged', score: 1.0 }] });
+      return;
+    }
+  } catch (err) {
+    // if any unexpected error occurs while checking ext, continue to normal flow
+    console.warn('Could not determine file extension for DeepDanbooru shortcut check', err);
+  }
   const cfg = readDeepDanbooruConfig();
 
   // Construct args: prefer explicit modelPath, otherwise pass project path
