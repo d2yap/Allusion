@@ -58,9 +58,8 @@
       "resources/deepdanbooru/predict.py"
     ],
     "nsis": {
-      "oneClick": false,
-  "include": "build/deepdanbooru-check.nsh",
-      "allowToChangeInstallationDirectory": true
+  "oneClick": false,
+  "allowToChangeInstallationDirectory": true
     },
     "portable": {
       "artifactName": "${productName}Portable.${version}.${ext}"
