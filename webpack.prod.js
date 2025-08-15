@@ -5,6 +5,7 @@
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 const path = require('path');
 
 let mainConfig = {
@@ -131,6 +132,8 @@ let rendererConfig = {
       filename: '[name].[contenthash].css',
       chunkFilename: '[id].[contenthash].css',
     }),
+  // Ignore optional fsevents module on non-macOS platforms to avoid warnings
+  new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
   ],
 };
 

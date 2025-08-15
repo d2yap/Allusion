@@ -8,6 +8,8 @@ import './style.scss';
 
 import Dexie from 'dexie';
 import fse from 'fs-extra';
+import path from 'path';
+import { predictDeepDanbooru, DEFAULT_TAG_THRESHOLD } from './api/deepdanbooru';
 import { autorun, reaction, runInAction } from 'mobx';
 import React from 'react';
 import { Root, createRoot } from 'react-dom/client';
@@ -105,6 +107,8 @@ async function runMainApp(db: Dexie, root: Root): Promise<void> {
     </StoreProvider>,
   );
 
+  // After initial render, Auto-tagging is handled by RootStore after files are loaded
+
   // -------------------------------------------
   // Messaging with the main process
   // -------------------------------------------
@@ -112,7 +116,42 @@ async function runMainApp(db: Dexie, root: Root): Promise<void> {
   RendererMessenger.onImportExternalImage(async ({ item }) => {
     console.log('Importing image...', item);
     // Might take a while for the file watcher to detect the image - otherwise the image is not in the DB and cannot be tagged
-    promiseRetry(() => addTagsToFile(item.filePath, item.tagNames));
+    await promiseRetry(() => addTagsToFile(item.filePath, item.tagNames));
+
+    // After import, if the file has no tags, run DeepDanbooru to predict tags and add them
+    try {
+      const clientFile = rootStore.fileStore.fileList.find((f) => f.absolutePath === item.filePath);
+      console.debug('DeepDanbooru: clientFile resolved:', {
+        clientFilePath: item.filePath,
+        clientFile,
+      });
+      console.debug(
+        'DeepDanbooru: clientFile tag state:',
+        clientFile ? Array.from(clientFile.tags || []).map((t) => t.name) : null,
+      );
+      if (clientFile && (!clientFile.tags || clientFile.tags.size === 0)) {
+        // Determine a default project path inside the app resources. Users can change this later.
+        const modulePath = await RendererMessenger.getPath('module');
+        const projectPath = path.join(modulePath, '..', 'resources', 'deepdanbooru');
+        console.info('Running DeepDanbooru for', item.filePath, 'project:', projectPath);
+        const reply = await predictDeepDanbooru(item.filePath, projectPath, DEFAULT_TAG_THRESHOLD);
+        if (reply.error) {
+          console.warn('DeepDanbooru prediction failed:', reply.error);
+        } else if (reply.tags && reply.tags.length > 0) {
+          // Filter by threshold and map to tag names
+          const predictedTagNames = reply.tags
+            .filter((t) => t.score >= DEFAULT_TAG_THRESHOLD)
+            .map((t) => t.tag);
+          if (predictedTagNames.length > 0) {
+            console.info('Adding predicted tags:', predictedTagNames);
+            // The file might not have propagated into the client file list yet. Retry until it exists.
+            await promiseRetry(() => addTagsToFile(item.filePath, predictedTagNames));
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error while running DeepDanbooru prediction for imported image', e);
+    }
   });
 
   RendererMessenger.onAddTagsToFile(async ({ item }) => {

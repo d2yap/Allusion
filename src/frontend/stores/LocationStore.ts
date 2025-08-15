@@ -4,6 +4,8 @@ import SysPath from 'path';
 
 import { getThumbnailPath } from 'common/fs';
 import { promiseAllLimit } from 'common/promise';
+import { promiseRetry } from 'common/timeout';
+import { predictDeepDanbooru, DEFAULT_TAG_THRESHOLD } from '../../api/deepdanbooru';
 import { DataStorage } from '../../api/data-storage';
 import { OrderDirection } from '../../api/data-storage-search';
 import { FileDTO, IMG_EXTENSIONS, IMG_EXTENSIONS_TYPE } from '../../api/file';
@@ -425,6 +427,88 @@ class LocationStore {
     AppToaster.show({ message: `Location "${location.name}" is ready!`, timeout: 5000 }, toastKey);
     this.rootStore.fileStore.refetch();
     this.rootStore.fileStore.refetchFileCounts();
+    // Run DeepDanbooru predictions for newly imported files to auto-tag them
+    try {
+      // Ask the user whether it's okay to run DeepDanbooru on this newly imported folder
+      const shouldAutoTag = window.confirm(
+        `Run DeepDanbooru to auto-tag newly imported images in "${location.name}"? This may take some time.`,
+      );
+      if (!shouldAutoTag) {
+        return;
+      }
+      const modulePath = await RendererMessenger.getPath('module');
+      const projectPath = SysPath.join(modulePath, '..', 'resources', 'deepdanbooru');
+
+      const jobs = files.map((f) => async () => {
+        try {
+          // wait for client file to be available
+          const clientFile = await promiseRetry(
+            async () => {
+              const cf = this.rootStore.fileStore.fileList.find(
+                (c) => c.absolutePath === f.absolutePath,
+              );
+              if (!cf) {
+                throw new Error('client-file-not-yet-available');
+              }
+              return cf;
+            },
+            5,
+            300,
+          );
+
+          if (clientFile.tags && clientFile.tags.size > 0) {
+            return;
+          }
+
+          const reply = await predictDeepDanbooru(
+            f.absolutePath,
+            projectPath,
+            DEFAULT_TAG_THRESHOLD,
+          );
+          if (reply.error) {
+            return;
+          }
+          const predictedTagNames = (reply.tags || [])
+            .filter((t) => t.score >= DEFAULT_TAG_THRESHOLD)
+            .map((t) => t.tag);
+          if (predictedTagNames.length === 0) {
+            return;
+          }
+
+          const { tagStore, fileStore } = this.rootStore;
+          const tags = await Promise.all(
+            predictedTagNames.map(
+              async (tagName) =>
+                tagStore.findByName(tagName) ?? (await tagStore.create(tagStore.root, tagName)),
+            ),
+          );
+          const cf = fileStore.fileList.find((c) => c.absolutePath === f.absolutePath);
+          if (!cf) {
+            return;
+          }
+          tags.forEach(cf.addTag);
+        } catch (e) {
+          // ignore per-file errors
+        }
+      });
+
+      // Run jobs sequentially to avoid tag mixups and to ensure model is loaded one image at a time.
+      for (let i = 0; i < jobs.length; i++) {
+        try {
+          await jobs[i]();
+        } catch (e) {
+          // ignore individual job failures
+        }
+        // update progress toaster if available
+        try {
+          showProgressToaster((i + 1) / files.length);
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {
+      console.error('Could not run DeepDanbooru predictions for imported location', e);
+    }
   }
 
   @action.bound async delete(location: ClientLocation): Promise<void> {

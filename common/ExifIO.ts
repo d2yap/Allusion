@@ -47,13 +47,45 @@ import { action, makeObservable, observable, runInAction } from 'mobx';
 import exiftool from 'node-exiftool';
 import { IS_WIN } from './process';
 import { getExtraResourcePath } from './fs';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
 
 // The exif binary is placed using ElectronBuilder's extraResources:
 const exiftoolRunnable = IS_WIN ? 'exiftool.exe' : 'exiftool.pl';
 
-const EXIF_TOOL_PATH = getExtraResourcePath(`exiftool/${exiftoolRunnable}`);
+// Resolve exiftool path robustly: prefer the extraResources path but fall back to
+// common locations (project resources, process.cwd(), etc.) so that in dev mode
+// or when running from various working directories the binary can still be found.
+const candidatePaths = [
+  getExtraResourcePath(`exiftool/${exiftoolRunnable}`),
+  // common dev path: resources folder in repo root
+  path.resolve(process.cwd(), 'resources', 'exiftool', exiftoolRunnable),
+  // a relative location from this compiled file
+  path.resolve(__dirname, '..', '..', 'resources', 'exiftool', exiftoolRunnable),
+  // user home fallback (unlikely but harmless)
+  path.resolve(os.homedir(), 'resources', 'exiftool', exiftoolRunnable),
+];
 
-console.log('Exif tool path: ', EXIF_TOOL_PATH);
+let EXIF_TOOL_PATH = '';
+for (const p of candidatePaths) {
+  try {
+    if (p && fs.existsSync(p)) {
+      EXIF_TOOL_PATH = p;
+      break;
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+if (!EXIF_TOOL_PATH) {
+  console.error('ExifTool binary not found in any candidate location. Tried:', candidatePaths);
+  EXIF_TOOL_PATH = candidatePaths[0]; // keep original behaviour but log failure
+} else {
+  console.log('Exif tool path: ', EXIF_TOOL_PATH);
+}
+
 const ep = new exiftool.ExiftoolProcess(EXIF_TOOL_PATH);
 
 const defaultWriteArgs = [

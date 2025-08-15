@@ -119,3 +119,16 @@ export const GET_VERSION = 'GET_VERSION';
 export const CHECK_FOR_UPDATES = 'CHECK_FOR_UPDATES';
 export const TOGGLE_CHECK_UPDATES_ON_STARTUP = 'TOGGLE_CHECK_UPDATES_ON_STARTUP';
 export const IS_CHECK_UPDATES_ON_STARTUP_ENABLED = 'IS_CHECK_UPDATES_ON_STARTUP_ENABLED';
+
+//////////////////// DeepDanbooru ////////////////////
+export const DEEPDANBOORU_PREDICT = 'DEEPDANBOORU_PREDICT';
+export type DeepDanbooruPredictMessage = {
+  imagePath: string; // absolute path to image to predict
+  projectPath: string; // path to DeepDanbooru project/model directory
+  threshold?: number; // optional score threshold (0..1)
+};
+export const DEEPDANBOORU_PREDICT_REPLY = 'DEEPDANBOORU_PREDICT_REPLY';
+export type DeepDanbooruPredictReply = {
+  tags: Array<{ tag: string; score: number }>;
+  error?: string;
+};

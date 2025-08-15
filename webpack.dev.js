@@ -5,6 +5,7 @@
 // Based on https://taraksharma.com/setting-up-electron-typescript-react-webpack/
 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 const path = require('path');
 
 let mainConfig = {
@@ -118,6 +119,8 @@ let rendererConfig = {
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, './src/index.html'),
     }),
+  // Ignore optional fsevents module on non-macOS platforms to avoid warnings
+  new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
   ],
 };
 

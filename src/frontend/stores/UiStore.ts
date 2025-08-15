@@ -110,6 +110,9 @@ type PersistentPreferenceFields =
   | 'outlinerWidth'
   | 'inspectorWidth'
   | 'isRememberSearchEnabled'
+  | 'isAutoTagOnImportEnabled'
+  | 'deepDanbooruModelPath'
+  | 'deepDanbooruTagListPath'
   // the following are only restored when isRememberSearchEnabled is enabled
   | 'isSlideMode'
   | 'firstItem'
@@ -146,6 +149,12 @@ class UiStore {
   @observable isThumbnailResolutionOverlayEnabled: boolean = false;
   /** Whether to restore the last search query on start-up */
   @observable isRememberSearchEnabled: boolean = true;
+  /** Whether to automatically tag untagged images at import/startup */
+  @observable isAutoTagOnImportEnabled: boolean = false;
+  /** Path to user-supplied DeepDanbooru model (.h5) */
+  @observable deepDanbooruModelPath: string = '';
+  /** Path to DeepDanbooru tag list (txt/json) */
+  @observable deepDanbooruTagListPath: string = '';
   /** Index of the first item in the viewport. Also acts as the current item shown in slide mode */
   // TODO: Might be better to store the ID to the file. I believe we were storing the index for performance, but we have instant conversion between index/ID now
   @observable firstItem: number = 0;
@@ -224,6 +233,10 @@ class UiStore {
 
   @action setMethod(method: ViewMethod): void {
     this.method = method;
+  }
+
+  @action.bound setAutoTagOnImport(enabled: boolean): void {
+    this.isAutoTagOnImportEnabled = enabled;
   }
 
   @action.bound setMethodList(): void {
@@ -812,6 +825,13 @@ class UiStore {
         this.isThumbnailTagOverlayEnabled = Boolean(prefs.isThumbnailTagOverlayEnabled ?? true);
         this.isThumbnailFilenameOverlayEnabled = Boolean(prefs.isThumbnailFilenameOverlayEnabled ?? false); // eslint-disable-line prettier/prettier
         this.isThumbnailResolutionOverlayEnabled = Boolean(prefs.isThumbnailResolutionOverlayEnabled ?? false); // eslint-disable-line prettier/prettier
+        this.isAutoTagOnImportEnabled = Boolean(prefs.isAutoTagOnImportEnabled ?? false);
+        if (prefs.deepDanbooruModelPath) {
+          this.deepDanbooruModelPath = prefs.deepDanbooruModelPath;
+        }
+        if (prefs.deepDanbooruTagListPath) {
+          this.deepDanbooruTagListPath = prefs.deepDanbooruTagListPath;
+        }
         this.outlinerWidth = Math.max(Number(prefs.outlinerWidth), UiStore.MIN_OUTLINER_WIDTH);
         this.inspectorWidth = Math.max(Number(prefs.inspectorWidth), UiStore.MIN_INSPECTOR_WIDTH);
         Object.entries<string>(prefs.hotkeyMap).forEach(
@@ -844,6 +864,22 @@ class UiStore {
       RendererMessenger.setTheme({ theme: this.theme === 'dark' ? 'dark' : 'light' });
     }
 
+    // If no deepdanbooru paths were recovered from localStorage, ask main process for configured values
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { ipcRenderer } = require('electron');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cfg: any = await ipcRenderer.invoke('deepdanbooru:get-config');
+        if (cfg) {
+          if (!this.deepDanbooruModelPath && cfg.modelPath) this.deepDanbooruModelPath = cfg.modelPath;
+          if (!this.deepDanbooruTagListPath && cfg.tagListPath) this.deepDanbooruTagListPath = cfg.tagListPath;
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
     // Set default thumbnail directory in case none was specified
     if (this.thumbnailDirectory.length === 0) {
       RendererMessenger.getDefaultThumbnailDirectory().then((defaultThumbDir) => {
@@ -868,6 +904,9 @@ class UiStore {
       isThumbnailFilenameOverlayEnabled: this.isThumbnailFilenameOverlayEnabled,
       isThumbnailTagOverlayEnabled: this.isThumbnailTagOverlayEnabled,
       isThumbnailResolutionOverlayEnabled: this.isThumbnailResolutionOverlayEnabled,
+  isAutoTagOnImportEnabled: this.isAutoTagOnImportEnabled,
+  deepDanbooruModelPath: this.deepDanbooruModelPath,
+  deepDanbooruTagListPath: this.deepDanbooruTagListPath,
       outlinerWidth: this.outlinerWidth,
       inspectorWidth: this.inspectorWidth,
       isRememberSearchEnabled: this.isRememberSearchEnabled,

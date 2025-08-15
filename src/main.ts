@@ -11,6 +11,7 @@ import {
   shell,
   Rectangle,
   Tray,
+  ipcMain,
 } from 'electron';
 import path from 'path';
 import fse from 'fs-extra';
@@ -23,13 +24,48 @@ import { createBugReport, githubUrl } from '../common/config';
 import { IS_DEV, IS_MAC } from '../common/process';
 import { TagDTO, ROOT_TAG_ID } from './api/tag';
 import { MainMessenger } from './ipc/main';
-import { WindowSystemButtonPress } from './ipc/messages';
+import {
+  WindowSystemButtonPress,
+  DEEPDANBOORU_PREDICT,
+  DEEPDANBOORU_PREDICT_REPLY,
+  DeepDanbooruPredictMessage,
+} from './ipc/messages';
+import { spawn } from 'child_process';
+import fs from 'fs';
 
 // TODO: change this when running in portable mode, see portable-improvements branch
 const basePath = app.getPath('userData');
 
 const preferencesFilePath = path.join(basePath, 'preferences.json');
 const windowStateFilePath = path.join(basePath, 'windowState.json');
+const deepDanbooruConfigPath = path.join(basePath, 'deepdanbooru.json');
+
+function readDeepDanbooruConfig() {
+  try {
+    const raw = fs.readFileSync(deepDanbooruConfigPath, 'utf8');
+    return JSON.parse(raw);
+  } catch (e) {
+    // If no explicit config, but a bundled deepdanbooru project exists under resources, prefer that
+    try {
+      const defaultProject = path.join(__dirname, '..', 'resources', 'deepdanbooru');
+      const modelsDir = path.join(defaultProject, 'models');
+      if (fs.existsSync(defaultProject) && fs.existsSync(modelsDir)) {
+        return { projectPath: defaultProject };
+      }
+    } catch (err) {
+      // fallthrough
+    }
+    return {};
+  }
+}
+
+function writeDeepDanbooruConfig(cfg: Record<string, unknown>) {
+  try {
+    fs.writeFileSync(deepDanbooruConfigPath, JSON.stringify(cfg, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Could not write DeepDanbooru config', e);
+  }
+}
 
 type PreferencesFile = {
   checkForUpdatesOnStartup?: boolean;
@@ -101,7 +137,7 @@ function createWindow() {
     icon: `${__dirname}/${AppIcon}`,
     // Should be same as body background: Only for split second before css is loaded
     backgroundColor: '#1c1e23',
-    title: 'Allusion',
+    title: 'Allusion+Deep',
     show: false, // only show once initial loading is finished
     ...previousWindowState,
   };
@@ -141,7 +177,7 @@ function createWindow() {
         // Should be same as body background: Only for split second before css is loaded
         backgroundColor: '#1c1e23',
         parent: mainWindow,
-        title: `${WINDOW_TITLES[frameName]} • Allusion`,
+        title: `${WINDOW_TITLES[frameName]} • Allusion+Deep`,
         frame: true,
         titleBarStyle: 'default',
       },
@@ -193,7 +229,7 @@ function createWindow() {
   const menuBar: Electron.MenuItemConstructorOptions[] = [];
 
   menuBar.push({
-    label: 'Allusion',
+    label: 'Allusion+Deep',
     submenu: [
       { role: 'about' },
       { type: 'separator' },
@@ -363,7 +399,7 @@ function createPreviewWindow() {
     icon: `${__dirname}/${AppIcon}`,
     // Should be same as body background: Only for split second before css is loaded
     backgroundColor: '#14181a',
-    title: 'Allusion Quick View',
+    title: 'Allusion+Deep Quick View',
     show: false, // invis by default
   });
   previewWindow.setMenuBarVisibility(false);
@@ -400,7 +436,7 @@ function createTrayMenu() {
       },
     ]);
     tray.setContextMenu(trayMenu);
-    tray.setToolTip('Allusion - Your Visual Library');
+    tray.setToolTip('Allusion+Deep - Your Visual Library');
     tray.on('click', onTrayClick);
   }
 }
@@ -416,11 +452,11 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Ensure only a single instance of Allusion can be open
+// Ensure only a single instance of Allusion+Deep can be open
 // https://www.electronjs.org/docs/api/app#apprequestsingleinstancelock
 const HAS_INSTANCE_LOCK = app.requestSingleInstanceLock();
 if (!HAS_INSTANCE_LOCK) {
-  console.log('Another instance of Allusion is already running');
+  console.log('Another instance of Allusion+Deep is already running');
   app.quit();
 } else {
   app.on('second-instance', () => {
@@ -559,7 +595,12 @@ process.on('uncaughtException', async (error) => {
         type: 'error',
         title: 'Unexpected error',
         message: errorMessage,
-        buttons: ['Try to keep running', 'File bug report', 'Restart Allusion', 'Quit Allusion'],
+        buttons: [
+          'Try to keep running',
+          'File bug report',
+          'Restart Allusion+Deep',
+          'Quit Allusion+Deep',
+        ],
       });
       if (dialogResult.response === 0) {
         // Keep running
@@ -744,6 +785,103 @@ MainMessenger.onToggleCheckUpdatesOnStartup(() => {
 });
 
 MainMessenger.onIsCheckUpdatesOnStartupEnabled(() => preferences.checkForUpdatesOnStartup === true);
+
+// IPC handlers for DeepDanbooru configuration and file selection from renderer
+ipcMain.handle('deepdanbooru:choose-model', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Keras model', extensions: ['h5'] }],
+  });
+  if (canceled || filePaths.length === 0) return null;
+  const cfg = readDeepDanbooruConfig();
+  cfg.modelPath = filePaths[0];
+  writeDeepDanbooruConfig(cfg);
+  return filePaths[0];
+});
+
+ipcMain.handle('deepdanbooru:choose-taglist', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Tag list', extensions: ['txt', 'json'] }],
+  });
+  if (canceled || filePaths.length === 0) return null;
+  const cfg = readDeepDanbooruConfig();
+  cfg.tagListPath = filePaths[0];
+  writeDeepDanbooruConfig(cfg);
+  return filePaths[0];
+});
+
+ipcMain.handle('deepdanbooru:get-config', () => {
+  return readDeepDanbooruConfig();
+});
+
+ipcMain.handle('deepdanbooru:set-config', async (_ev, partialCfg: Record<string, unknown>) => {
+  try {
+    const current = readDeepDanbooruConfig();
+    const updated = { ...current, ...partialCfg };
+    writeDeepDanbooruConfig(updated);
+    return updated;
+  } catch (e) {
+    console.error('Could not set DeepDanbooru config', e);
+    return null;
+  }
+});
+
+// DeepDanbooru prediction handler: spawn Python helper and forward JSON reply
+ipcMain.on(DEEPDANBOORU_PREDICT, async (e, msg: DeepDanbooruPredictMessage) => {
+  const pythonPath = process.env.DEEPDANBOORU_PYTHON || 'python'; // system python; can be overridden via env var
+  const scriptPath = path.join(__dirname, '..', 'resources', 'deepdanbooru', 'predict.py');
+  // Default project path is the resources deepdanbooru folder
+  const defaultProjectPath = path.join(__dirname, '..', 'resources', 'deepdanbooru');
+  const cfg = readDeepDanbooruConfig();
+
+  // Construct args: prefer explicit modelPath, otherwise pass project path
+  const args: string[] = ['--image', msg.imagePath, '--threshold', String(msg.threshold ?? 0.5)];
+  if (cfg && cfg.modelPath) {
+    args.push('--model', String(cfg.modelPath));
+  } else if (msg.projectPath) {
+    args.push('--project', msg.projectPath);
+  } else if (fs.existsSync(defaultProjectPath)) {
+    args.push('--project', defaultProjectPath);
+  }
+
+  try {
+    console.info('Spawning DeepDanbooru helper', { pythonPath, scriptPath, args });
+    const proc = spawn(pythonPath, [scriptPath, ...args]);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (chunk: Buffer) => {
+      const s = chunk.toString();
+      stdout += s;
+      console.info('DeepDanbooru helper stdout chunk:', s);
+    });
+    proc.stderr.on('data', (chunk: Buffer) => {
+      const s = chunk.toString();
+      stderr += s;
+      console.warn('DeepDanbooru helper stderr chunk:', s);
+    });
+    proc.on('close', (code: number) => {
+      if (stdout.trim().length === 0) {
+        e.sender.send(DEEPDANBOORU_PREDICT_REPLY, {
+          tags: [],
+          error: stderr || `Python exited with code ${code}`,
+        });
+        return;
+      }
+      try {
+        const parsed = JSON.parse(stdout);
+        e.sender.send(DEEPDANBOORU_PREDICT_REPLY, parsed);
+      } catch (err) {
+        e.sender.send(DEEPDANBOORU_PREDICT_REPLY, {
+          tags: [],
+          error: `Could not parse output: ${err} - ${stderr}`,
+        });
+      }
+    });
+  } catch (err: any) {
+    e.sender.send(DEEPDANBOORU_PREDICT_REPLY, { tags: [], error: String(err) });
+  }
+});
 
 // Helper functions and variables/constants
 

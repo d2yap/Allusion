@@ -4,6 +4,9 @@ import { action, computed, makeObservable, observable, runInAction } from 'mobx'
 import { getThumbnailPath } from 'common/fs';
 import { promiseAllLimit } from 'common/promise';
 import { debounce } from 'common/timeout';
+import SysPath from 'path';
+import { RendererMessenger } from '../../ipc/renderer';
+import { predictDeepDanbooru, DEFAULT_TAG_THRESHOLD } from '../../api/deepdanbooru';
 import { DataStorage } from '../../api/data-storage';
 import { ConditionDTO, OrderBy, OrderDirection } from '../../api/data-storage-search';
 import { FileDTO, IMG_EXTENSIONS_TYPE } from '../../api/file';
@@ -674,6 +677,72 @@ class FileStore {
       this.numUntaggedFiles = numUntaggedFiles;
       this.numTotalFiles = numTotalFiles;
     });
+  }
+
+  /** Run DeepDanbooru sequentially on files that have no tags and add predicted tags */
+  @action.bound async autoTagUntagged(): Promise<void> {
+    const toastKey = 'autotag-deepdanbooru';
+    try {
+      const untagged = this.fileList.filter((f) => !f.tags || f.tags.size === 0);
+      if (untagged.length === 0) {
+        AppToaster.show({ message: 'No untagged images found.', timeout: 3000 }, toastKey);
+        return;
+      }
+
+      const modulePath = await RendererMessenger.getPath('module');
+      const projectPath = SysPath.join(modulePath, '..', 'resources', 'deepdanbooru');
+
+      for (let i = 0; i < untagged.length; i++) {
+        const file = untagged[i];
+        AppToaster.show(
+          { message: `Auto-tagging ${i + 1}/${untagged.length}: ${file.name}`, timeout: 0 },
+          toastKey,
+        );
+        try {
+          const reply = await predictDeepDanbooru(
+            file.absolutePath,
+            projectPath,
+            DEFAULT_TAG_THRESHOLD,
+          );
+          if (reply.error) {
+            console.warn('DeepDanbooru prediction failed for', file.absolutePath, reply.error);
+            continue;
+          }
+          const predictedTagNames = (reply.tags || [])
+            .filter((t) => t.score >= DEFAULT_TAG_THRESHOLD)
+            .map((t) => t.tag);
+          if (predictedTagNames.length === 0) {
+            continue;
+          }
+
+          const { tagStore } = this.rootStore;
+          const tags = await Promise.all(
+            predictedTagNames.map(
+              async (tagName) =>
+                tagStore.findByName(tagName) ?? (await tagStore.create(tagStore.root, tagName)),
+            ),
+          );
+
+          // Re-resolve file from fileList and add tags
+          const cf = this.fileList.find((c) => c.absolutePath === file.absolutePath);
+          if (!cf) {
+            continue;
+          }
+          tags.forEach(cf.addTag);
+        } catch (e) {
+          console.error('Auto-tagging failed for', file.absolutePath, e);
+          continue;
+        }
+      }
+
+      AppToaster.show({ message: 'Auto-tagging complete.', timeout: 5000 }, toastKey);
+    } catch (e) {
+      console.error('Could not auto-tag untagged images', e);
+      AppToaster.show(
+        { message: 'Auto-tagging failed. See console for details.', timeout: 5000 },
+        toastKey,
+      );
+    }
   }
 
   @action private setOrderDirection(order: OrderDirection) {

@@ -62,9 +62,9 @@ class RootStore {
     const rootStore = new RootStore(backend, backup, (fileStore, uiStore) => {
       if (uiStore.isSlideMode && fileStore.fileList.length > 0) {
         const activeFile = fileStore.fileList[uiStore.firstItem];
-        return `${activeFile.filename}.${activeFile.extension} - Allusion`;
+        return `${activeFile.filename}.${activeFile.extension} - Allusion+Deep`;
       } else {
-        return 'Allusion';
+        return 'Allusion+Deep';
       }
     });
 
@@ -108,6 +108,12 @@ class RootStore {
       if (isSlideMode) {
         rootStore.uiStore.enableSlideMode();
       }
+
+      // After files have been loaded, if the user enabled auto-tag on import/startup, run it now
+      if (rootStore.uiStore.isAutoTagOnImportEnabled) {
+        // Fire-and-forget
+        void rootStore.fileStore.autoTagUntagged();
+      }
     });
 
     // Then, look for any new or removed images, and refetch if necessary
@@ -122,7 +128,7 @@ class RootStore {
 
   static async preview(backend: DataStorage, backup: DataBackup): Promise<RootStore> {
     const rootStore = new RootStore(backend, backup, (fileStore, uiStore) => {
-      const PREVIEW_WINDOW_BASENAME = 'Allusion Quick View';
+      const PREVIEW_WINDOW_BASENAME = 'Allusion+Deep Quick View';
       const index = uiStore.firstItem;
       if (index >= 0 && index < fileStore.fileList.length) {
         const file = fileStore.fileList[index];

@@ -10,6 +10,7 @@ import { moveThumbnailDir } from '../../image/ThumbnailGeneration';
 import { ClearDbButton } from '../ErrorBoundary';
 import { Callout } from 'widgets/notifications';
 import ExternalLink from 'src/frontend/components/ExternalLink';
+import { ipcRenderer } from 'electron';
 
 export const Advanced = observer(() => {
   const { uiStore, fileStore } = useStore();
@@ -72,6 +73,62 @@ export const Advanced = observer(() => {
         </FileInput>
         <h3 className="filepicker-label">Thumbnail Directory</h3>
         <div className="filepicker-path">{thumbnailDirectory}</div>
+      </div>
+
+      <h3>Auto-tagging</h3>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>DeepDanbooru model</label>
+        <div className="filepicker">
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input readOnly value={uiStore.deepDanbooruModelPath} className="filepicker-path" />
+            <FileInput
+              className="btn-minimal filepicker-input"
+              options={{ properties: ['openFile'], filters: [{ name: 'Keras model', extensions: ['h5'] }] }}
+              onChange={async ([p]) => {
+                if (!p) return;
+                // persist config via main
+                await (ipcRenderer as any).invoke('deepdanbooru:set-config', { modelPath: p });
+                uiStore.deepDanbooruModelPath = p;
+              }}
+            >
+              Choose...
+            </FileInput>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>DeepDanbooru tag list</label>
+        <div className="filepicker">
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input readOnly value={uiStore.deepDanbooruTagListPath} className="filepicker-path" />
+            <FileInput
+              className="btn-minimal filepicker-input"
+              options={{ properties: ['openFile'], filters: [{ name: 'Tag list', extensions: ['txt','json'] }] }}
+              onChange={async ([p]) => {
+                if (!p) return;
+                await (ipcRenderer as any).invoke('deepdanbooru:set-config', { tagListPath: p });
+                uiStore.deepDanbooruTagListPath = p;
+              }}
+            >
+              Choose...
+            </FileInput>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={uiStore.isAutoTagOnImportEnabled}
+            onChange={(e) => uiStore.setAutoTagOnImport(e.target.checked)}
+          />
+          Automatically tag untagged images on import/startup
+        </label>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <button className="btn" type="button" onClick={() => fileStore.autoTagUntagged()}>
+          Run auto-tag scan now
+        </button>
       </div>
 
       <h3>Development</h3>
