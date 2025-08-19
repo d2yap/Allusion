@@ -1,4 +1,6 @@
-Allusion Fork
+# Allusion Fork
+This Allusion fork integrates Tensorflow models for image tag sorting. 
+* This fork uses DeepDanbooru to tag images.
 
 <img alt="Allusion" src="./resources/images/helpcenter/logo-about-helpcenter-dark.jpg" width="250" />
 
