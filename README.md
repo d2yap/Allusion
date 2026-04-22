@@ -1,6 +1,8 @@
 # Allusion Fork
-This Allusion fork integrates Tensorflow models for image tag sorting. 
-* This fork uses DeepDanbooru to tag images.
+
+This Allusion fork integrates Tensorflow models for image tag sorting.
+
+- This fork uses DeepDanbooru to tag images.
 
 <img alt="Allusion" src="./resources/images/helpcenter/logo-about-helpcenter-dark.jpg" width="250" />
 
@@ -19,6 +21,14 @@ The application can be automatically updated when a new version becomes availabl
 
 You need to have [NodeJS](https://nodejs.org/en/download/) and a package manager such as [Yarn](https://yarnpkg.com/lang/en/docs/install/) installed.
 Then run the following commands to get started:
+
+### Requirements
+
+- Tensorflow (installed through pip)
+- pip
+- Python3
+
+  You will get an ENOENT error if you do not have these installed.
 
 1. Run `yarn install` to install or update all necessary dependencies.
 2. Run `yarn dev` to build the project files to the `/build` directory. This will keep running to immediately build changed files when they are updated.
