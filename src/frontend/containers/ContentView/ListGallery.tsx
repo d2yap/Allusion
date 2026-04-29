@@ -25,6 +25,8 @@ const getItemKey = action((index: number, data: ClientFile[]): string => {
   return data[index].id;
 });
 
+const FixedSizeListComponent = FixedSizeList as unknown as React.JSXElementConstructor<any>;
+
 const ListGallery = observer(({ contentRect, select, lastSelectionIndex }: GalleryProps) => {
   const { fileStore, uiStore } = useStore();
   const [cellSize, setCellSize] = useState(24);
@@ -101,7 +103,7 @@ const ListGallery = observer(({ contentRect, select, lastSelectionIndex }: Galle
   // TODO: resizing columns is broken
 
   return (
-    <FixedSizeList
+    <FixedSizeListComponent
       useIsScrolling
       height={contentRect.height}
       width={contentRect.width}

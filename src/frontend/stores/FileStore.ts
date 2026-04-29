@@ -139,7 +139,7 @@ class FileStore {
         this.fileList.map((f) => ({
           absolutePath: f.absolutePath,
           tagHierarchy: Array.from(
-            f.tags,
+            f.tags as Iterable<ClientTag>,
             action((t) => t.path),
           ),
         })),
@@ -619,7 +619,9 @@ class FileStore {
           .filter((t) => t !== undefined) as ClientTag[];
         if (
           existingFile.tags.size !== newTags.length ||
-          Array.from(existingFile.tags).some((t, i) => t.id !== newTags[i].id)
+          Array.from(existingFile.tags as Iterable<ClientTag>).some(
+            (t, i) => t.id !== newTags[i].id,
+          )
         ) {
           existingFile.updateTagsFromBackend(newTags);
         }

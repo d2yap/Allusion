@@ -24,6 +24,7 @@ import SplashScreen from './frontend/containers/SplashScreen';
 import StoreProvider from './frontend/contexts/StoreContext';
 import Overlay from './frontend/Overlay';
 import PreviewApp from './frontend/Preview';
+import { ClientTag } from './frontend/entities/Tag';
 import { FILE_STORAGE_KEY } from './frontend/stores/FileStore';
 import RootStore from './frontend/stores/RootStore';
 import { PREFERENCES_STORAGE_KEY } from './frontend/stores/UiStore';
@@ -127,7 +128,7 @@ async function runMainApp(db: Dexie, root: Root): Promise<void> {
       });
       console.debug(
         'DeepDanbooru: clientFile tag state:',
-        clientFile ? Array.from(clientFile.tags || []).map((t) => t.name) : null,
+        clientFile ? Array.from(clientFile.tags as Iterable<ClientTag>).map((t) => t.name) : null,
       );
       if (clientFile && (!clientFile.tags || clientFile.tags.size === 0)) {
         // Determine a default project path inside the app resources. Users can change this later.

@@ -77,7 +77,7 @@ export const Advanced = observer(() => {
 
       <h3>Auto-tagging</h3>
       <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>DeepDanbooru model</label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Tagger model</label>
         <div className="filepicker">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input readOnly value={uiStore.deepDanbooruModelPath} className="filepicker-path" />
@@ -85,7 +85,7 @@ export const Advanced = observer(() => {
               className="btn-minimal filepicker-input"
               options={{
                 properties: ['openFile'],
-                filters: [{ name: 'Keras model', extensions: ['h5'] }],
+                filters: [{ name: 'ONNX / Keras model', extensions: ['onnx', 'h5'] }],
               }}
               onChange={async ([p]) => {
                 if (!p) {
@@ -102,9 +102,7 @@ export const Advanced = observer(() => {
         </div>
       </div>
       <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          DeepDanbooru tag list
-        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>WD14 tag list</label>
         <div className="filepicker">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input readOnly value={uiStore.deepDanbooruTagListPath} className="filepicker-path" />
@@ -112,7 +110,7 @@ export const Advanced = observer(() => {
               className="btn-minimal filepicker-input"
               options={{
                 properties: ['openFile'],
-                filters: [{ name: 'Tag list', extensions: ['txt', 'json'] }],
+                filters: [{ name: 'Tag list', extensions: ['csv', 'txt', 'json'] }],
               }}
               onChange={async ([p]) => {
                 if (!p) {

@@ -45,9 +45,9 @@ function readDeepDanbooruConfig() {
     const raw = fs.readFileSync(deepDanbooruConfigPath, 'utf8');
     return JSON.parse(raw);
   } catch (e) {
-    // If no explicit config, but a bundled deepdanbooru project exists under resources, prefer that
+    // If no explicit config, but a bundled WD14 project exists under resources, prefer that
     try {
-      const defaultProject = path.join(__dirname, '..', 'resources', 'deepdanbooru');
+      const defaultProject = path.join(__dirname, '..', 'resources', 'wd14');
       const modelsDir = path.join(defaultProject, 'models');
       if (fs.existsSync(defaultProject) && fs.existsSync(modelsDir)) {
         return { projectPath: defaultProject };
@@ -67,9 +67,19 @@ function writeDeepDanbooruConfig(cfg: Record<string, unknown>) {
   }
 }
 
-function resolveDeepDanbooruScript(): string {
+function resolveDeepDanbooruScript(modelPath?: string): string {
   const execDir = path.dirname(process.execPath || '');
-  const candidates = [
+  const legacyModel = (modelPath || '').toLowerCase().endsWith('.h5');
+  const wd14Candidates = [
+    path.join(process.resourcesPath || '', 'wd14', 'tagger.py'),
+    path.join(process.resourcesPath || '', 'resources', 'wd14', 'tagger.py'),
+    path.join(process.resourcesPath || '', 'app', 'resources', 'wd14', 'tagger.py'),
+    path.join(execDir, 'resources', 'wd14', 'tagger.py'),
+    path.resolve(__dirname, '..', 'resources', 'wd14', 'tagger.py'),
+    path.resolve(__dirname, '..', '..', 'resources', 'wd14', 'tagger.py'),
+    path.resolve(process.cwd(), 'resources', 'wd14', 'tagger.py'),
+  ];
+  const legacyCandidates = [
     path.join(process.resourcesPath || '', 'deepdanbooru', 'predict.py'),
     path.join(process.resourcesPath || '', 'resources', 'deepdanbooru', 'predict.py'),
     path.join(process.resourcesPath || '', 'app', 'resources', 'deepdanbooru', 'predict.py'),
@@ -78,6 +88,9 @@ function resolveDeepDanbooruScript(): string {
     path.resolve(__dirname, '..', '..', 'resources', 'deepdanbooru', 'predict.py'),
     path.resolve(process.cwd(), 'resources', 'deepdanbooru', 'predict.py'),
   ];
+  const candidates = legacyModel
+    ? [...legacyCandidates, ...wd14Candidates]
+    : [...wd14Candidates, ...legacyCandidates];
 
   for (const p of candidates) {
     try {
@@ -525,6 +538,7 @@ app.on('activate', () => {
 // - Auto check for updates on startup (toggleable in settings) -> show toast message if update available
 // - Option to check for updates in settings
 // - Only download and install when user agrees
+// - disable this
 autoUpdater.autoDownload = false;
 let hasCheckedForUpdateOnStartup = false;
 if (IS_DEV) {
@@ -811,7 +825,7 @@ MainMessenger.onIsMaximized(() => mainWindow?.isMaximized() ?? false);
 
 MainMessenger.onGetVersion(getVersion);
 
-MainMessenger.onCheckForUpdates(() => autoUpdater.checkForUpdates());
+//MainMessenger.onCheckForUpdates(() => autoUpdater.checkForUpdates());
 
 MainMessenger.onToggleCheckUpdatesOnStartup(() => {
   updatePreferences({
@@ -870,13 +884,6 @@ ipcMain.handle('deepdanbooru:set-config', async (_ev, partialCfg: Record<string,
 // DeepDanbooru prediction handler: spawn Python helper and forward JSON reply
 ipcMain.on(DEEPDANBOORU_PREDICT, async (e, msg: DeepDanbooruPredictMessage) => {
   const pythonPath = process.env.DEEPDANBOORU_PYTHON || 'python'; // system python; can be overridden via env var
-  const scriptPath = resolveDeepDanbooruScript();
-  // Default project path is the resources deepdanbooru folder
-  const defaultProjectPath = path.join(__dirname, '..', 'resources', 'deepdanbooru');
-  if (!scriptPath || !fs.existsSync(scriptPath)) {
-    console.error('DeepDanbooru script not found, aborting helper spawn. scriptPath=', scriptPath);
-    return;
-  }
   // Quick check: handle vector or unsupported image formats (e.g., SVG) by returning an "Untagged" tag
   try {
     const ext = path.extname(msg.imagePath || '').toLowerCase();
@@ -891,15 +898,30 @@ ipcMain.on(DEEPDANBOORU_PREDICT, async (e, msg: DeepDanbooruPredictMessage) => {
     console.warn('Could not determine file extension for DeepDanbooru shortcut check', err);
   }
   const cfg = readDeepDanbooruConfig();
+  const modelPath = cfg && cfg.modelPath ? String(cfg.modelPath) : '';
+  const scriptPath = resolveDeepDanbooruScript(modelPath);
+  const defaultProjectPath = modelPath.toLowerCase().endsWith('.h5')
+    ? path.join(__dirname, '..', 'resources', 'deepdanbooru')
+    : path.join(__dirname, '..', 'resources', 'wd14');
+  if (!scriptPath || !fs.existsSync(scriptPath)) {
+    console.error('DeepDanbooru script not found, aborting helper spawn. scriptPath=', scriptPath);
+    return;
+  }
 
-  // Construct args: prefer explicit modelPath, otherwise pass project path
+  // Construct args: prefer explicit model/taglist paths, otherwise pass project path
   const args: string[] = ['--image', msg.imagePath, '--threshold', String(msg.threshold ?? 0.5)];
-  if (cfg && cfg.modelPath) {
-    args.push('--model', String(cfg.modelPath));
-  } else if (msg.projectPath) {
-    args.push('--project', msg.projectPath);
-  } else if (fs.existsSync(defaultProjectPath)) {
-    args.push('--project', defaultProjectPath);
+  if (modelPath) {
+    args.push('--model', modelPath);
+  }
+  if (cfg && cfg.tagListPath) {
+    args.push('--taglist', String(cfg.tagListPath));
+  }
+  if (!cfg?.modelPath || !cfg?.tagListPath) {
+    if (msg.projectPath) {
+      args.push('--project', msg.projectPath);
+    } else if (fs.existsSync(defaultProjectPath)) {
+      args.push('--project', defaultProjectPath);
+    }
   }
 
   try {

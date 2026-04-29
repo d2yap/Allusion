@@ -317,7 +317,7 @@ class UiStore {
     //   : Array.from(this.fileSelection);
 
     RendererMessenger.sendPreviewFiles({
-      ids: Array.from(this.fileSelection, (file) => file.id),
+      ids: Array.from(this.fileSelection as Iterable<ClientFile>, (file) => file.id),
       activeImgId: this.getFirstSelectedFileId(),
       thumbnailDirectory: this.thumbnailDirectory,
       viewMethod: this.method,
@@ -342,7 +342,10 @@ class UiStore {
       return;
     }
 
-    const absolutePaths = Array.from(this.fileSelection, (file) => file.absolutePath);
+    const absolutePaths = Array.from(
+      this.fileSelection as Iterable<ClientFile>,
+      (file) => file.absolutePath,
+    );
     absolutePaths.forEach((path) => shell.openExternal(`file://${path}`).catch(console.error));
   }
 
@@ -685,7 +688,7 @@ class UiStore {
 
   @action.bound addTagSelectionToCriteria(): void {
     const newCrits = Array.from(
-      this.tagSelection,
+      this.tagSelection as Iterable<ClientTag>,
       (tag) => new ClientTagSearchCriteria('tags', tag.id),
     );
     this.addSearchCriterias(newCrits);
@@ -694,7 +697,10 @@ class UiStore {
 
   @action.bound replaceCriteriaWithTagSelection(): void {
     this.replaceSearchCriterias(
-      Array.from(this.tagSelection, (tag) => new ClientTagSearchCriteria('tags', tag.id)),
+      Array.from(
+        this.tagSelection as Iterable<ClientTag>,
+        (tag) => new ClientTagSearchCriteria('tags', tag.id),
+      ),
     );
     this.clearTagSelection();
   }
@@ -823,8 +829,12 @@ class UiStore {
           this.setUpscaleMode(prefs.upscaleMode);
         }
         this.isThumbnailTagOverlayEnabled = Boolean(prefs.isThumbnailTagOverlayEnabled ?? true);
-        this.isThumbnailFilenameOverlayEnabled = Boolean(prefs.isThumbnailFilenameOverlayEnabled ?? false); // eslint-disable-line prettier/prettier
-        this.isThumbnailResolutionOverlayEnabled = Boolean(prefs.isThumbnailResolutionOverlayEnabled ?? false); // eslint-disable-line prettier/prettier
+        this.isThumbnailFilenameOverlayEnabled = Boolean(
+          prefs.isThumbnailFilenameOverlayEnabled ?? false,
+        ); // eslint-disable-line prettier/prettier
+        this.isThumbnailResolutionOverlayEnabled = Boolean(
+          prefs.isThumbnailResolutionOverlayEnabled ?? false,
+        ); // eslint-disable-line prettier/prettier
         this.isAutoTagOnImportEnabled = Boolean(prefs.isAutoTagOnImportEnabled ?? false);
         if (prefs.deepDanbooruModelPath) {
           this.deepDanbooruModelPath = prefs.deepDanbooruModelPath;

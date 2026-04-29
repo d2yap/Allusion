@@ -132,8 +132,8 @@ let rendererConfig = {
       filename: '[name].[contenthash].css',
       chunkFilename: '[id].[contenthash].css',
     }),
-  // Ignore optional fsevents module on non-macOS platforms to avoid warnings
-  new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
+    // Ignore optional fsevents module on non-macOS platforms to avoid warnings
+    new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
   ],
 };
 

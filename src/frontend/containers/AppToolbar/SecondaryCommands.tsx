@@ -34,11 +34,6 @@ const SecondaryCommands = observer(() => {
         text="Settings"
         accelerator={<KeyCombo combo={uiStore.hotkeyMap.toggleSettings} />}
       />
-      <MenuItem
-        icon={IconSet.RELOAD}
-        onClick={RendererMessenger.checkForUpdates}
-        text="Check for updates"
-      />
       <MenuItem icon={IconSet.LOGO} onClick={uiStore.toggleAbout} text="About" />
     </MenuButton>
   );

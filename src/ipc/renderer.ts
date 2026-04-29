@@ -2,7 +2,6 @@ import { ipcRenderer } from 'electron';
 import path from 'path';
 import {
   ADD_TAGS_TO_FILE,
-  CHECK_FOR_UPDATES,
   CLEAR_DATABASE,
   CLOSED_PREVIEW_WINDOW,
   DRAG_EXPORT,
@@ -164,7 +163,7 @@ export class RendererMessenger {
 
   static getVersion = (): string => ipcRenderer.sendSync(GET_VERSION);
 
-  static checkForUpdates = async () => ipcRenderer.invoke(CHECK_FOR_UPDATES);
+  //static checkForUpdates = async () => ipcRenderer.invoke(CHECK_FOR_UPDATES);
 
   static isCheckUpdatesOnStartupEnabled = (): boolean =>
     ipcRenderer.sendSync(IS_CHECK_UPDATES_ON_STARTUP_ENABLED);

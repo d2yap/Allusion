@@ -119,8 +119,8 @@ let rendererConfig = {
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, './src/index.html'),
     }),
-  // Ignore optional fsevents module on non-macOS platforms to avoid warnings
-  new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
+    // Ignore optional fsevents module on non-macOS platforms to avoid warnings
+    new webpack.IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
   ],
 };
 

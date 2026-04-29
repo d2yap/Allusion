@@ -189,7 +189,7 @@ export const ThumbnailTags = observer(
         onDrop={eventManager.drop}
         onDragEnd={eventManager.dragEnd}
       >
-        {Array.from(file.tags, (tag) => (
+        {Array.from(file.tags as Iterable<ClientTag>, (tag) => (
           <TagWithHint key={tag.id} tag={tag} onContextMenu={eventManager.showTagContextMenu} />
         ))}
       </span>

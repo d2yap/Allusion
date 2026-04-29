@@ -1,7 +1,6 @@
 import { BrowserWindow, ipcMain, WebContents } from 'electron';
 import {
   ADD_TAGS_TO_FILE,
-  CHECK_FOR_UPDATES,
   CLEAR_DATABASE,
   CLOSED_PREVIEW_WINDOW,
   DRAG_EXPORT,
@@ -176,7 +175,7 @@ export class MainMessenger {
   static onGetVersion = (cb: () => string) =>
     ipcMain.on(GET_VERSION, (e) => (e.returnValue = cb()));
 
-  static onCheckForUpdates = (cb: () => void) => ipcMain.handle(CHECK_FOR_UPDATES, cb);
+  //static onCheckForUpdates = (cb: () => void) => ipcMain.handle(CHECK_FOR_UPDATES, cb);
 
   static onToggleCheckUpdatesOnStartup = (cb: () => void) =>
     ipcMain.on(TOGGLE_CHECK_UPDATES_ON_STARTUP, cb);

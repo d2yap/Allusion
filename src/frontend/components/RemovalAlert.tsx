@@ -6,6 +6,7 @@ import { IconSet, Tag } from 'widgets';
 import { Alert, DialogButton } from 'widgets/popovers';
 import { RendererMessenger } from '../../ipc/renderer';
 import { useStore } from '../contexts/StoreContext';
+import { ClientFile } from '../entities/File';
 import { ClientLocation, ClientSubLocation } from '../entities/Location';
 import { ClientFileSearchItem } from '../entities/SearchItem';
 import { ClientTag } from '../entities/Tag';
@@ -54,7 +55,7 @@ export const TagRemoval = observer((props: IRemovalProps<ClientTag>) => {
   const { uiStore } = useStore();
   const { object } = props;
   const tagsToRemove = Array.from(
-    object.isSelected ? uiStore.tagSelection : object.getSubTree(),
+    (object.isSelected ? uiStore.tagSelection : object.getSubTree()) as Iterable<ClientTag>,
     (t) => <Tag key={t.id} text={t.name} color={t.viewColor} />,
   );
 
@@ -106,7 +107,7 @@ export const FileRemoval = observer(() => {
       information="Deleting files will permanently remove them from Allusion, so any tags saved on them will be lost. If you move files back into their location, they will be automatically detected by Allusion."
       body={
         <div className="deletion-confirmation-list">
-          {Array.from(selection).map((f) => (
+          {Array.from(selection as Iterable<ClientFile>).map((f) => (
             <div key={f.id}>{f.absolutePath}</div>
           ))}
         </div>
@@ -161,7 +162,7 @@ export const MoveFilesToTrashBin = observer(() => {
       } in Allusion will be lost.`}
       body={
         <div className="deletion-confirmation-list">
-          {Array.from(selection).map((f) => (
+          {Array.from(selection as Iterable<ClientFile>).map((f) => (
             <div key={f.id}>{f.absolutePath}</div>
           ))}
         </div>
