@@ -249,7 +249,9 @@ export function useCommandHandler(
         return;
       }
       if (uiStore.fileSelection.size > 1) {
-        RendererMessenger.startDragExport(Array.from(uiStore.fileSelection, (f) => f.absolutePath));
+        RendererMessenger.startDragExport(
+          Array.from(uiStore.fileSelection as Iterable<ClientFile>, (f) => f.absolutePath),
+        );
       } else {
         RendererMessenger.startDragExport([file.absolutePath]);
       }

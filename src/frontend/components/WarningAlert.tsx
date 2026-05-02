@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { action } from 'mobx';
 
 import { useStore } from 'src/frontend/contexts/StoreContext';
+import { ClientFile } from 'src/frontend/entities/File';
 import { IconSet } from 'widgets';
 import { Alert, DialogButton } from 'widgets/popovers';
 
@@ -32,7 +33,7 @@ export const ManyOpenExternal = observer(() => {
     >
       <p>This may severely slow down your computer, to the point of it becoming unresponsive.</p>
       <div className="deletion-confirmation-list">
-        {Array.from(selection).map((f) => (
+        {Array.from(selection as Iterable<ClientFile>).map((f) => (
           <div key={f.id}>{f.absolutePath}</div>
         ))}
       </div>

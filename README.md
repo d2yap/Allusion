@@ -1,8 +1,6 @@
-# Allusion Fork
+# Allusion+Deep
 
-This Allusion fork integrates Tensorflow models for image tag sorting.
-
-- This fork uses DeepDanbooru to tag images.
+This Allusion fork integrates local image taggers for image sorting. The app can use a WD14-compatible helper to tag images automatically.
 
 <img alt="Allusion" src="./resources/images/helpcenter/logo-about-helpcenter-dark.jpg" width="250" />
 
@@ -24,11 +22,20 @@ Then run the following commands to get started:
 
 ### Requirements
 
-- Tensorflow (installed through pip)
 - pip
 - Python3
 
-  You will get an ENOENT error if you do not have these installed.
+  > You will get an ENOENT error if you do not have these installed.
+
+### Additional (WD14 tagger helper)
+
+-- Python packages required to run `resources/wd14/tagger.py` (use `pip`):
+
+```bash
+python -m pip install pillow numpy pandas onnxruntime scipy torch safetensors
+```
+
+- The helper accepts tag lists in `csv` files with `name` and `category` columns, as well as plain `txt` or `json` files.
 
 1. Run `yarn install` to install or update all necessary dependencies.
 2. Run `yarn dev` to build the project files to the `/build` directory. This will keep running to immediately build changed files when they are updated.

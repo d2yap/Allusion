@@ -55,7 +55,8 @@
     },
     "extraResources": [
       "resources/themes",
-      "resources/deepdanbooru/predict.py"
+      "resources/deepdanbooru/predict.py",
+      "resources/wd14/tagger.py"
     ],
     "nsis": {
       "oneClick": false,
@@ -116,6 +117,7 @@
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.2",
     "typescript": "^4.9.5",
+    "@types/minimatch": "^3.0.2",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"
   },

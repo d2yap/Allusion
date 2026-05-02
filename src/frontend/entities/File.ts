@@ -155,7 +155,7 @@ export class ClientFile {
       locationId: this.locationId,
       relativePath: this.relativePath,
       absolutePath: this.absolutePath,
-      tags: Array.from(this.tags, (t) => t.id), // removes observable properties from observable array
+      tags: Array.from(this.tags as Iterable<ClientTag>, (t) => t.id), // removes observable properties from observable array
       size: this.size,
       width: this.width,
       height: this.height,

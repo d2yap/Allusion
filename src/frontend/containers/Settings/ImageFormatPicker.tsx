@@ -11,9 +11,9 @@ export const ImageFormatPicker = observer(() => {
   const [removeDisabledImages, setRemoveDisabledImages] = useState(true);
   const toggleRemoveDisabledImages = useCallback(() => setRemoveDisabledImages((val) => !val), []);
 
-  const [newEnabledFileExtensions, setNewEnabledFileExtensions] = useState(
-    new Set(locationStore.enabledFileExtensions),
-  );
+  const [newEnabledFileExtensions, setNewEnabledFileExtensions] = useState<
+    Set<IMG_EXTENSIONS_TYPE>
+  >(new Set(locationStore.enabledFileExtensions));
   const toggleExtension = useCallback(
     (ext: IMG_EXTENSIONS_TYPE) => {
       const newNewEnabledFileExtensions = new Set(newEnabledFileExtensions);
@@ -68,7 +68,11 @@ export const ImageFormatPicker = observer(() => {
 
       <Button
         text="Reset"
-        onClick={() => setNewEnabledFileExtensions(new Set(locationStore.enabledFileExtensions))}
+        onClick={() =>
+          setNewEnabledFileExtensions(
+            new Set<IMG_EXTENSIONS_TYPE>(locationStore.enabledFileExtensions),
+          )
+        }
       />
       <Button
         text="Save"
